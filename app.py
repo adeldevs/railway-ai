@@ -2,23 +2,35 @@ from fastapi import FastAPI, HTTPException
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 import os
 import torch
+from dotenv import load_dotenv
+
+# Load environment variables from .env file for local testing
+load_dotenv()
 
 app = FastAPI()
 
-# Using TinyLlama as it is the safest for 500MB-1GB RAM constraints
+# 1. Model and Environment Setup
 MODEL_NAME = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+HF_TOKEN = os.getenv("HF_TOKEN") 
+
 print(f"Loading model: {MODEL_NAME}")
 
 try:
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    
-    # torch.float16 halves the RAM usage compared to default float32
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
-        torch_dtype=torch.float16,
-        device_map="auto"
+    # 2. Load Tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(
+        MODEL_NAME, 
+        token=HF_TOKEN
     )
     
+    # 3. Load Model (16-bit precision, auto-device mapping)
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_NAME,
+        dtype=torch.float16,
+        device_map="auto",
+        token=HF_TOKEN
+    )
+    
+    # 4. Initialize Pipeline
     pipe = pipeline(
         "text-generation",
         model=model,
@@ -64,7 +76,6 @@ async def chat(message: str):
     
     try:
         result = pipe(formatted_prompt, max_length=150, num_return_sequences=1)
-        # Extract only the newly generated response, stripping the prompt
         response = result[0]["generated_text"].split("<|assistant|>\n")[-1].strip()
         return {
             "user_message": message,
