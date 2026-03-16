@@ -9,8 +9,8 @@ load_dotenv()
 
 app = FastAPI()
 
-# 1. Model and Environment Setup
-MODEL_NAME = "facebook/opt-125m"
+# 1. Model and Environment Setup# Change this line
+MODEL_NAME = "sshleifer/tiny-gpt2"
 HF_TOKEN = os.getenv("HF_TOKEN") 
 
 print(f"Loading model: {MODEL_NAME}")
