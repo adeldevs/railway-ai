@@ -2,14 +2,14 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies needed for some ML packages
+# Install git for Hugging Face downloads
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install CPU-only torch
+# Copy and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the model - using TinyLlama
+# Pre-download the model to "bake" it into the image
 RUN python -c "from transformers import AutoTokenizer, AutoModelForCausalLM; \
     model_name='TinyLlama/TinyLlama-1.1B-Chat-v1.0'; \
     AutoTokenizer.from_pretrained(model_name); \
@@ -18,4 +18,6 @@ RUN python -c "from transformers import AutoTokenizer, AutoModelForCausalLM; \
 COPY app.py .
 
 EXPOSE 8000
-CMD ["python", "app.py"]
+
+# Using --workers 1 to save RAM on Railway's free tier
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
