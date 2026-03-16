@@ -1,0 +1,80 @@
+from fastapi import FastAPI, HTTPException
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+import os
+import torch
+
+app = FastAPI()
+
+# Using TinyLlama as it is the safest for 500MB-1GB RAM constraints
+MODEL_NAME = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+print(f"Loading model: {MODEL_NAME}")
+
+try:
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    
+    # torch.float16 halves the RAM usage compared to default float32
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_NAME,
+        torch_dtype=torch.float16,
+        device_map="auto"
+    )
+    
+    pipe = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        max_length=200
+    )
+    print("✓ Model loaded successfully!")
+except Exception as e:
+    print(f"✗ Error loading model: {e}")
+    pipe = None
+
+@app.get("/")
+async def root():
+    return {
+        "status": "running",
+        "model": MODEL_NAME,
+        "endpoints": ["/generate", "/chat"]
+    }
+
+@app.post("/generate")
+async def generate(prompt: str, max_length: int = 100):
+    """Raw text completion"""
+    if pipe is None:
+        raise HTTPException(status_code=500, detail="Model not loaded")
+    
+    try:
+        result = pipe(prompt, max_length=max_length, num_return_sequences=1)
+        return {
+            "prompt": prompt,
+            "generated_text": result[0]["generated_text"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/chat")
+async def chat(message: str):
+    """Chat endpoint using TinyLlama's specific chat template"""
+    if pipe is None:
+        raise HTTPException(status_code=500, detail="Model not loaded")
+    
+    # Proper token formatting for TinyLlama instruct models
+    formatted_prompt = f"<|system|>\nYou are a helpful AI assistant.</s>\n<|user|>\n{message}</s>\n<|assistant|>\n"
+    
+    try:
+        result = pipe(formatted_prompt, max_length=150, num_return_sequences=1)
+        # Extract only the newly generated response, stripping the prompt
+        response = result[0]["generated_text"].split("<|assistant|>\n")[-1].strip()
+        return {
+            "user_message": message,
+            "assistant_response": response
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    # Railway automatically injects the PORT environment variable
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
