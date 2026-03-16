@@ -4,7 +4,6 @@ import os
 import torch
 from dotenv import load_dotenv
 
-# Load environment variables from .env file for local testing
 load_dotenv()
 
 app = FastAPI()
