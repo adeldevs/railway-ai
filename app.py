@@ -10,7 +10,7 @@ load_dotenv()
 app = FastAPI()
 
 # 1. Model and Environment Setup
-MODEL_NAME = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+MODEL_NAME = "facebook/opt-125m"
 HF_TOKEN = os.getenv("HF_TOKEN") 
 
 print(f"Loading model: {MODEL_NAME}")
