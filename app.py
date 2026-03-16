@@ -51,13 +51,17 @@ async def root():
     }
 
 @app.post("/generate")
-async def generate(prompt: str, max_length: int = 100):
-    """Raw text completion"""
+async def generate(prompt: str, max_length: int = 50): # Reduced default length
     if pipe is None:
         raise HTTPException(status_code=500, detail="Model not loaded")
-    
     try:
-        result = pipe(prompt, max_length=max_length, num_return_sequences=1)
+        # Explicitly passing parameters to avoid the config warning
+        result = pipe(
+            prompt, 
+            max_new_tokens=20, # Use max_new_tokens instead of max_length for speed
+            num_return_sequences=1,
+            pad_token_id=tokenizer.eos_token_id # Explicitly set pad token
+        )
         return {
             "prompt": prompt,
             "generated_text": result[0]["generated_text"]
