@@ -10,8 +10,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Pre-download the model to "bake" it into the image
+# Change the model name in the pre-download line
 RUN python -c "from transformers import AutoTokenizer, AutoModelForCausalLM; \
-    model_name='TinyLlama/TinyLlama-1.1B-Chat-v1.0'; \
+    model_name='facebook/opt-125m'; \
     AutoTokenizer.from_pretrained(model_name); \
     AutoModelForCausalLM.from_pretrained(model_name)"
 
